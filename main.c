@@ -3,6 +3,11 @@
 #include <psp2/kernel/processmgr.h> // スリープ、プロセス終了
 #include <psp2/power.h>       // CPU/GPUクロック周波数設定用
 #include <stdio.h>            // printf用
+#include <stdio.h>    // ファイル操作とprintf用
+#include <string.h>   // memset用
+#include <psp2/io/dirent.h> // ディレクトリ操作用 (SceIoMkdir)
+#include <psp2/io/fcntl.h>  // ファイル操作用 (open/read/write/close)
+
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
