@@ -18,6 +18,36 @@ int main(int argc, char *argv[]) {
     vita2d_init();
     // コントローラーの初期化
     sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
+
+// 設定をファイルからロードする関数
+int load_config(AppConfig *config, const char *path) {
+    SceUID fd = sceIoOpen(path, SCE_O_RDONLY, 0);
+    if (fd < 0) {
+        printf("Config file not found or failed to open: %s\n", path);
+        // ファイルが見つからない場合はデフォルト設定を適用
+        memset(config, 0, sizeof(AppConfig)); // 構造体をゼロクリア
+        config->cpu_freq = 333; // デフォルトCPU周波数
+        config->gpu_freq_index = 2; // デフォルトGPU周波数 (222MHzに対応するインデックス)
+        return -1; // 失敗
+    }
+
+    // ファイルから構造体サイズ分を読み込む
+    int bytes_read = sceIoRead(fd, config, sizeof(AppConfig));
+    sceIoClose(fd);
+
+    if (bytes_read != sizeof(AppConfig)) {
+        printf("Error reading config file: bytes_read = %d\n", bytes_read);
+        // 読み込みサイズが不正な場合もデフォルト設定を適用
+        memset(config, 0, sizeof(AppConfig));
+        config->cpu_freq = 333;
+        config->gpu_freq_index = 2;
+        return -1; // 失敗
+    }
+
+    printf("Config loaded: CPU=%d, GPU_idx=%d\n", config->cpu_freq, config->gpu_freq_index);
+    return 0; // 成功
+}
+
     
     // 現在のCPU/GPU周波数を取得
     int current_cpu_freq = scePowerGetCpuClockFrequency();
