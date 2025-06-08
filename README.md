@@ -32,7 +32,6 @@ VitaSDKとCMakeを使用してビルドされます。
     ```bash
     cmake .. -DCMAKE_TOOLCHAIN_FILE=${VITASDK}/share/vita.toolchain.cmake
     ```
-    （`VITASDK` はVitaSDKのインストールパスです環境変数に設定されていれば省略可能かもしれません。）
 
 5.  **ビルド**:
     ```bash
