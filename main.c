@@ -48,6 +48,18 @@ int load_config(AppConfig *config, const char *path) {
     return 0; // 成功
 }
 
+    AppConfig app_config;
+load_config(&app_config, CONFIG_PATH);
+// ロードした設定を適用
+scePowerSetCpuClockFrequency(app_config.cpu_freq);
+if (app_config.gpu_freq_index < 0 || app_config.gpu_freq_index >= num_gpu_freqs) {
+    app_config.gpu_freq_index = num_gpu_freqs - 1; // 範囲外ならデフォルト
+}
+scePowerSetGpuClockFrequency(gpu_freqs[app_config.gpu_freq_index]);
+// 実際の周波数を取得し直す
+current_cpu_freq = scePowerGetCpuClockFrequency();
+current_gpu_freq = scePowerGetGpuClockFrequency();
+
     
     // 現在のCPU/GPU周波数を取得
     int current_cpu_freq = scePowerGetCpuClockFrequency();
