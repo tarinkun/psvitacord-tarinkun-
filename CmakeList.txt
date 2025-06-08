@@ -1,0 +1,36 @@
+# CMakeの最低バージョン
+cmake_minimum_required(VERSION 3.1)
+
+# プロジェクト名と対応する言語
+project(my-vita-homebrew C)
+
+# VitaSDKのツールチェーンファイルを指定（環境変数経由で自動でロードされるはず）
+# set(CMAKE_TOOLCHAIN_FILE $ENV{VITASDK}/share/vita.toolchain.cmake)
+
+# ビルドタイプ（Release, Debugなど）
+set(CMAKE_BUILD_TYPE Release)
+
+# 実行可能ファイル（VPK）を生成するための設定
+# VPKはPS Vitaのアプリケーションパッケージ形式
+add_executable(${PROJECT_NAME} main.c)
+
+# リンクするライブラリ
+# vitasdk_add_lib と vitasdk_add_syslib はVitaSDK CMakeが提供する関数
+# -lm: 数学関数ライブラリ
+# -lSceAppUtil: アプリケーションユーティリティ
+# -lSceDisplay: ディスプレイ関連
+# -lSceCtrl: コントローラー入力
+# -lSceKernel: カーネル関連
+# -lvita2d: vita2dlib （vita2dlibを使う場合のみ追加）
+target_link_libraries(${PROJECT_NAME}
+    -lm
+    -lSceAppUtil
+    -lSceDisplay
+    -lSceCtrl
+    -lSceKernel
+    -lvita2d
+)
+
+# VPKファイルを生成する設定
+# vitasdk_build_vpk(${PROJECT_NAME} assets)
+# assets ディレクトリがない場合は削除するか、作成してください
