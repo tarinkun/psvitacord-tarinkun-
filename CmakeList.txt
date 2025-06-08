@@ -28,7 +28,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${VITA_LIBS})
 
 # LiveAreaアセットのディレクトリを指定
-set(LIVEAREA_DIR "${CMAKE_SOURCE_DIR}/sce_sys")
+set(LIVEAREA_DIR "${CMAKE_SOURCE_DIR}/scs_sys")
 
 # .vpkファイルを生成
 vita_create_vpk(${PROJECT_NAME}
