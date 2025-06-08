@@ -1,5 +1,4 @@
-//作成中です まだダウンロードしないでください
-# My PS Vita Hello World Homebrew
+# My PS Vita Homebrew
 
 このファイルは、PS Vita向けのcpuHomebrewアプリケーションのです。
 VitaSDKとCMakeを使用してビルドされます。
