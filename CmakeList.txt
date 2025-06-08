@@ -32,5 +32,14 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 # VPKファイルを生成する設定
-# vitasdk_build_vpk(${PROJECT_NAME} assets)
+# vitasdk_build_vpk(${psvita tarinkunselect} assets)
 # assets ディレクトリがない場合は削除するか、作成してください
+#target_link_libraries(${psvita tarinkunselect}
+    -lm
+    -lSceAppUtil
+    -lSceDisplay
+    -lSceCtrl
+    -lSceKernel
+    -lvita2d
+    -lScePower # これが既に含まれていればOK
+
