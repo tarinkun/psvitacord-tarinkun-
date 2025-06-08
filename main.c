@@ -183,6 +183,37 @@ int load_config(AppConfig *config, const char *path) {
         sceKernelDelayThread(1000 * 1000 / 60); // 約16ms待機で60FPSを目指す
     }
 
+// 設定をファイルに保存する関数
+int save_config(const AppConfig *config, const char *path) {
+    // ディレクトリが存在しない場合は作成
+    char dir_path[256];
+    strncpy(dir_path, path, sizeof(dir_path));
+    char *last_slash = strrchr(dir_path, '/');
+    if (last_slash) {
+        *last_slash = '\0'; // ファイル名部分を削除してディレクトリパスにする
+        sceIoMkdir(dir_path, 0777); // ディレクトリ作成 (エラー無視)
+    }
+
+    SceUID fd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0777);
+    if (fd < 0) {
+        printf("Failed to create/open config file for writing: %s, error=0x%08X\n", path, fd);
+        return -1; // 失敗
+    }
+
+    // 構造体サイズ分をファイルに書き込む
+    int bytes_written = sceIoWrite(fd, config, sizeof(AppConfig));
+    sceIoClose(fd);
+
+    if (bytes_written != sizeof(AppConfig)) {
+        printf("Error writing config file: bytes_written = %d\n", bytes_written);
+        return -1; // 失敗
+    }
+
+    printf("Config saved: CPU=%d, GPU_idx=%d\n", config->cpu_freq, config->gpu_freq_index);
+    return 0; // 成功
+}
+
+    
     // アプリケーション終了前のクリーンアップ
     vita2d_fini();
     sceKernelExitProcess(0); // プロセスを終了
