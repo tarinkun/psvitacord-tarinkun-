@@ -2,24 +2,25 @@
 #include <psp2/ctrl.h>        // コントローラー入力
 #include <psp2/kernel/processmgr.h> // スリープ、プロセス終了
 #include <psp2/power.h>       // CPU/GPUクロック周波数設定用
-#include <stdio.h>            // printf用
-#include <stdio.h>    // ファイル操作とprintf用
-#include <string.h>   // memset用
-#include <psp2/io/dirent.h> // ディレクトリ操作用 (SceIoMkdir)
-#include <psp2/io/fcntl.h>  // ファイル操作用 (open/read/write/close)
+#include <stdio.h>            // printf、ファイル操作用
+#include <string.h>           // memset、strncpy、strrchr用
+#include <psp2/io/dirent.h>   // ディレクトリ操作用 (sceIoMkdir)
+#include <psp2/io/fcntl.h>    // ファイル操作用 (sceIoOpen/Read/Write/Close)
 
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
+#define CONFIG_PATH "ux0:data/MyVitaFreqApp/config.conf" // 設定ファイルのパス。あなたのアプリ名に置き換えてください
 
-// アプリケーションのエントリポイント
-int main(int argc, char *argv[]) {
-    // vita2dlibの初期化
-    vita2d_init();
-    // コントローラーの初期化
-    sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
+// --- 設定構造体の定義 ---
+// main関数の外（グローバルスコープ）で定義
+typedef struct {
+    int cpu_freq;
+    int gpu_freq_index; // GPU周波数のインデックスを保存
+} AppConfig;
 
-// 設定をファイルからロードする関数
+// --- 設定をファイルからロードする関数 ---
+// main関数の外（グローバルスコープ）で定義
 int load_config(AppConfig *config, const char *path) {
     SceUID fd = sceIoOpen(path, SCE_O_RDONLY, 0);
     if (fd < 0) {
@@ -48,37 +49,66 @@ int load_config(AppConfig *config, const char *path) {
     return 0; // 成功
 }
 
-    AppConfig app_config;
-load_config(&app_config, CONFIG_PATH);
-// ロードした設定を適用
-scePowerSetCpuClockFrequency(app_config.cpu_freq);
-if (app_config.gpu_freq_index < 0 || app_config.gpu_freq_index >= num_gpu_freqs) {
-    app_config.gpu_freq_index = num_gpu_freqs - 1; // 範囲外ならデフォルト
-}
-scePowerSetGpuClockFrequency(gpu_freqs[app_config.gpu_freq_index]);
-// 実際の周波数を取得し直す
-current_cpu_freq = scePowerGetCpuClockFrequency();
-current_gpu_freq = scePowerGetGpuClockFrequency();
+// --- 設定をファイルに保存する関数 ---
+int save_config(const AppConfig *config, const char *path) {
+    // ディレクトリが存在しない場合は作成
+    char dir_path[256];
+    strncpy(dir_path, path, sizeof(dir_path));
+    char *last_slash = strrchr(dir_path, '/');
+    if (last_slash) {
+        *last_slash = '\0'; // ファイル名部分を削除してディレクトリパスにする
+        sceIoMkdir(dir_path, 0777); // ディレクトリ作成 (エラー無視)
+    }
 
-    
-    // 現在のCPU/GPU周波数を取得
+    SceUID fd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0777);
+    if (fd < 0) {
+        printf("Failed to create/open config file for writing: %s, error=0x%08X\n", path, fd);
+        return -1; // 失敗
+    }
+
+    // 構造体サイズ分をファイルに書き込む
+    int bytes_written = sceIoWrite(fd, config, sizeof(AppConfig));
+    sceIoClose(fd);
+
+    if (bytes_written != sizeof(AppConfig)) {
+        printf("Error writing config file: bytes_written = %d\n", bytes_written);
+        return -1; // 失敗
+    }
+
+    printf("Config saved: CPU=%d, GPU_idx=%d\n", config->cpu_freq, config->gpu_freq_index);
+    return 0; // 成功
+}
+
+
+// --- アプリケーションのエントリポイント ---
+int main(int argc, char *argv[]) {
+    // vita2dlibの初期化
+    vita2d_init();
+    // コントローラーの初期化
+    sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
+
+    AppConfig app_config; // 設定構造体のインスタンス
+
+    // GPU周波数の選択肢を定義
+    const int gpu_freqs[] = {111, 150, 164, 180, 222}; // MHz
+    const int num_gpu_freqs = sizeof(gpu_freqs) / sizeof(gpu_freqs[0]);
+
+    // アプリケーション起動時に設定をロード
+    // ロードに失敗した場合は、load_config関数内でデフォルト値が設定される
+    load_config(&app_config, CONFIG_PATH);
+
+    // ロードした設定を現在の周波数に反映
+    scePowerSetCpuClockFrequency(app_config.cpu_freq);
+    // ロードしたインデックスが範囲内かチェック
+    if (app_config.gpu_freq_index < 0 || app_config.gpu_freq_index >= num_gpu_freqs) {
+        app_config.gpu_freq_index = num_gpu_freqs - 1; // 無効な場合はデフォルト（最高周波数）に設定
+    }
+    scePowerSetGpuClockFrequency(gpu_freqs[app_config.gpu_freq_index]);
+
+    // 実際に設定された周波数を取得し直す
     int current_cpu_freq = scePowerGetCpuClockFrequency();
     int current_gpu_freq = scePowerGetGpuClockFrequency();
     int result; // 関数の戻り値を格納
-
-    // GPU周波数の選択肢を定義（一般的な値）
-    // 好みに応じて調整してください
-    const int gpu_freqs[] = {111, 150, 164, 180, 222}; // MHz
-    const int num_gpu_freqs = sizeof(gpu_freqs) / sizeof(gpu_freqs[0]);
-    int gpu_freq_index = 0; // 現在選択されている周波数のインデックス
-
-    // 現在のGPU周波数がリストにあれば、初期インデックスを設定
-    for (int i = 0; i < num_gpu_freqs; i++) {
-        if (gpu_freqs[i] == current_gpu_freq) {
-            gpu_freq_index = i;
-            break;
-        }
-    }
 
     // メインループ
     while (1) {
@@ -87,38 +117,38 @@ current_gpu_freq = scePowerGetGpuClockFrequency();
 
         // Xボタンが押されたら終了
         if (pad.buttons & SCE_CTRL_CROSS) {
-            break;
+            break; // ループを抜けてアプリケーション終了処理へ
         }
 
         // --- CPU周波数変更のロジック (R1/L1で変更) ---
-        // R1ボタンが押されたらCPU周波数を上げる
         if (pad.buttons & SCE_CTRL_R1) {
             int new_freq = 444; // MHz
             result = scePowerSetCpuClockFrequency(new_freq);
             if (result == 0) {
                 current_cpu_freq = new_freq;
+                app_config.cpu_freq = new_freq; // 設定を更新
                 printf("CPU frequency set to %d MHz\n", new_freq);
+                save_config(&app_config, CONFIG_PATH); // 変更を保存
             } else {
                 printf("Failed to set CPU frequency: 0x%08X\n", result);
             }
-            // 連打防止: ボタンを離すまで待機
             while (pad.buttons & SCE_CTRL_R1) {
                 sceCtrlReadBufferPositive(0, &pad, 1);
                 sceKernelDelayThread(1000 * 1000 / 60);
             }
         }
 
-        // L1ボタンが押されたらCPU周波数を下げる
         if (pad.buttons & SCE_CTRL_L1) {
-            int new_freq = 333; // MHz (元のコードは301でしたが、より一般的な333MHzに修正)
+            int new_freq = 333; // MHz
             result = scePowerSetCpuClockFrequency(new_freq);
             if (result == 0) {
                 current_cpu_freq = new_freq;
+                app_config.cpu_freq = new_freq; // 設定を更新
                 printf("CPU frequency set to %d MHz\n", new_freq);
+                save_config(&app_config, CONFIG_PATH); // 変更を保存
             } else {
                 printf("Failed to set CPU frequency: 0x%08X\n", result);
             }
-            // 連打防止: ボタンを離すまで待機
             while (pad.buttons & SCE_CTRL_L1) {
                 sceCtrlReadBufferPositive(0, &pad, 1);
                 sceKernelDelayThread(1000 * 1000 / 60);
@@ -128,19 +158,19 @@ current_gpu_freq = scePowerGetGpuClockFrequency();
 
         // --- GPU周波数変更のロジック (方向キー左右で変更) ---
         if (pad.buttons & SCE_CTRL_RIGHT) {
-            gpu_freq_index++;
-            if (gpu_freq_index >= num_gpu_freqs) {
-                gpu_freq_index = num_gpu_freqs - 1; // 最大値でクランプ
+            app_config.gpu_freq_index++; // 設定構造体内のインデックスを直接操作
+            if (app_config.gpu_freq_index >= num_gpu_freqs) {
+                app_config.gpu_freq_index = num_gpu_freqs - 1; // 最大値でクランプ
             }
-            int new_freq = gpu_freqs[gpu_freq_index];
+            int new_freq = gpu_freqs[app_config.gpu_freq_index];
             result = scePowerSetGpuClockFrequency(new_freq);
             if (result == 0) {
                 current_gpu_freq = new_freq;
                 printf("GPU frequency set to %d MHz\n", new_freq);
+                save_config(&app_config, CONFIG_PATH); // 変更を保存
             } else {
                 printf("Failed to set GPU frequency: 0x%08X\n", result);
             }
-            // 連打防止: ボタンを離すまで待機
             while (pad.buttons & SCE_CTRL_RIGHT) {
                 sceCtrlReadBufferPositive(0, &pad, 1);
                 sceKernelDelayThread(1000 * 1000 / 60);
@@ -148,19 +178,19 @@ current_gpu_freq = scePowerGetGpuClockFrequency();
         }
 
         if (pad.buttons & SCE_CTRL_LEFT) {
-            gpu_freq_index--;
-            if (gpu_freq_index < 0) {
-                gpu_freq_index = 0; // 最小値でクランプ
+            app_config.gpu_freq_index--; // 設定構造体内のインデックスを直接操作
+            if (app_config.gpu_freq_index < 0) {
+                app_config.gpu_freq_index = 0; // 最小値でクランプ
             }
-            int new_freq = gpu_freqs[gpu_freq_index];
+            int new_freq = gpu_freqs[app_config.gpu_freq_index];
             result = scePowerSetGpuClockFrequency(new_freq);
             if (result == 0) {
                 current_gpu_freq = new_freq;
                 printf("GPU frequency set to %d MHz\n", new_freq);
+                save_config(&app_config, CONFIG_PATH); // 変更を保存
             } else {
                 printf("Failed to set GPU frequency: 0x%08X\n", result);
             }
-            // 連打防止: ボタンを離すまで待機
             while (pad.buttons & SCE_CTRL_LEFT) {
                 sceCtrlReadBufferPositive(0, &pad, 1);
                 sceKernelDelayThread(1000 * 1000 / 60);
@@ -195,37 +225,6 @@ current_gpu_freq = scePowerGetGpuClockFrequency();
         sceKernelDelayThread(1000 * 1000 / 60); // 約16ms待機で60FPSを目指す
     }
 
-// 設定をファイルに保存する関数
-int save_config(const AppConfig *config, const char *path) {
-    // ディレクトリが存在しない場合は作成
-    char dir_path[256];
-    strncpy(dir_path, path, sizeof(dir_path));
-    char *last_slash = strrchr(dir_path, '/');
-    if (last_slash) {
-        *last_slash = '\0'; // ファイル名部分を削除してディレクトリパスにする
-        sceIoMkdir(dir_path, 0777); // ディレクトリ作成 (エラー無視)
-    }
-
-    SceUID fd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0777);
-    if (fd < 0) {
-        printf("Failed to create/open config file for writing: %s, error=0x%08X\n", path, fd);
-        return -1; // 失敗
-    }
-
-    // 構造体サイズ分をファイルに書き込む
-    int bytes_written = sceIoWrite(fd, config, sizeof(AppConfig));
-    sceIoClose(fd);
-
-    if (bytes_written != sizeof(AppConfig)) {
-        printf("Error writing config file: bytes_written = %d\n", bytes_written);
-        return -1; // 失敗
-    }
-
-    printf("Config saved: CPU=%d, GPU_idx=%d\n", config->cpu_freq, config->gpu_freq_index);
-    return 0; // 成功
-}
-
-    
     // アプリケーション終了前のクリーンアップ
     vita2d_fini();
     sceKernelExitProcess(0); // プロセスを終了
