@@ -1,8 +1,8 @@
 # CMakeの最低バージョン
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10) # vitasdk.cmakeは3.10以上を推奨
 
 # プロジェクト名と対応する言語
-vitaselect(my-vita-homebrew C)
+project(my_first_app LANGUAGES C) 
 
 # VitaSDKのパスを環境変数から取得
 if(NOT DEFINED ENV{VITASDK})
@@ -15,8 +15,10 @@ include($ENV{VITASDK}/share/cmake/vitasdk.cmake)
 # ソースファイルを指定
 set(SOURCES main.c)
 
+# Vita2Dライブラリを使用するための定義
+add_definitions(-DLINK_VITA2D) 
 
-add_definitions(-DLINK_VITA2D) #Vita2Dの使用
+# アプリケーションがリンクするライブラリのリスト
 set(VITA_LIBS vita2d -lvitaGL -lSceGxm -lSceDisplay -lSceCtrl -lSceAudio -lSceIme -lSceSysmodule -lSceAppMgr -lScePower -lm)
 
 # 実行可能ファイルをビルド
@@ -25,46 +27,21 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # 必要なVitaSDKライブラリをリンク
 target_link_libraries(${PROJECT_NAME} PRIVATE ${VITA_LIBS})
 
+# LiveAreaアセットのディレクトリを指定
 set(LIVEAREA_DIR "${CMAKE_SOURCE_DIR}/sce_sys")
 
 # .vpkファイルを生成
-# ここでアプリのバブル情報（タイトル、IDなど）を設定します
-vita_create_vpk(${vitaselect}
+vita_create_vpk(${PROJECT_NAME}
     LIVEAREA_DIR ${LIVEAREA_DIR}
-    TITLE_ID "TRNKN00001" 
+    TITLE_ID "TRNKN00001" # あなたのアプリのID
     TITLE "vita select" # アプリケーションのタイトル
     VERSION "1.00" # アプリケーションのバージョン
     REGION "JP" # 地域コード (JP, US, EUなど)
     CATEGORY "AP" # アプリケーションのカテゴリ (GD: ゲーム、AP: アプリケーションなど)
-    )
+)
 
 # ビルドディレクトリをクリーンアップするためのルールを追加 (オプション)
 add_custom_target(clean
     COMMAND ${CMAKE_COMMAND} --build . --target clean
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
-
-# VitaSDKのツールチェーンファイルを指定（環境変数経由で自動でロードされるはず）
-# set(CMAKE_TOOLCHAIN_FILE $ENV{VITASDK}/share/vita.toolchain.cmake)
-
-# ビルドタイプ（Release, Debugなど）
-set(CMAKE_BUILD_TYPE Release)
-
-# 実行可能ファイル（VPK）を生成するための設定
-# VPKはPS Vitaのアプリケーションパッケージ形式
-add_executable(${PROJECT_NAME} main.c)
-
-)
-
-# VPKファイルを生成する設定
-# vitasdk_build_vpk(${psvita tarinkunselect} assets)
-# assets ディレクトリがない場合は削除するか、作成してください
-#target_link_libraries(${psvita tarinkunselect}
-    -lm
-    -lSceAppUtil
-    -lSceDisplay
-    -lSceCtrl
-    -lSceKernel
-    -lvita2d
-    -lScePower # これが既に含まれていればOK
-
