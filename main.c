@@ -11,7 +11,7 @@
 
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
-#define CONFIG_PATH "ux0:data/vita_clock_app/config.conf" // 設定ファイルのパス。アプリケーション名に合わせて変更
+#define CONFIG_PATH "ux0:data/vita select/config.conf" // 設定ファイルのパス。アプリケーション名に合わせて変更
 
 // 利用可能なFPSの選択肢
 const int available_fps[] = {65, 60, 50, 40, 30};
