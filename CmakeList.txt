@@ -10,6 +10,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 
 # VitaSDKのツールチェーンをロード
+# これにより、VitaSDKのCMake機能（vita_create_vpkなど）が利用可能になります。
 include($ENV{VITASDK}/share/cmake/vitasdk.cmake)
 
 # ソースファイルを指定
@@ -19,18 +20,22 @@ set(SOURCES main.c)
 add_definitions(-DLINK_VITA2D) 
 
 # アプリケーションがリンクするライブラリのリスト
-set(VITA_LIBS vita2d -lvitaGL -lSceGxm -lSceDisplay -lSceCtrl -lSceAudio -lSceIme -lSceSysmodule -lSceAppMgr -lScePower -lm)
+# lSceIo を追加する場合はここに含めます
+set(VITA_LIBS vita2d -lvitaGL -lSceGxm -lSceDisplay -lSceCtrl -lSceAudio -lSceIme -lSceSysmodule -lSceAppMgr -lScePower -lm -lSceIo)
 
 # 実行可能ファイルをビルド
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 # 必要なVitaSDKライブラリをリンク
+# PROJECT_NAME のタイプミスを修正
 target_link_libraries(${PROJECT_NAME} PRIVATE ${VITA_LIBS})
 
 # LiveAreaアセットのディレクトリを指定
-set(LIVEAREA_DIR "${CMAKE_SOURCE_DIR}/scs_sys")
+set(LIVEAREA_DIR "${CMAKE_SOURCE_DIR}/sce_sys")
 
 # .vpkファイルを生成
+# vita_create_vpk() マクロは、VitaSDKのCMakeで提供される便利な機能です。
+# 実行可能ファイル名、LiveAreaディレクトリ、およびバブル情報を指定します。
 vita_create_vpk(${PROJECT_NAME}
     LIVEAREA_DIR ${LIVEAREA_DIR}
     TITLE_ID "TRNKN00001" # あなたのアプリのID
