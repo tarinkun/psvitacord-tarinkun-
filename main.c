@@ -11,7 +11,7 @@
 #include <psp2/ctrl.h> // コントローラー入力を取得するために必要
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
-#define CONFIG_PATH "ux0:data/MyVitaFreqApp/config.conf" // 設定ファイルのパス。あなたのアプリ名に置き換えてください
+#define CONFIG_PATH "ux0:data/vita select/config.conf" // 設定ファイルのパス。あなたのアプリ名に置き換えてください
 
 // 利用可能なFPSの選択肢
 const int available_fps[] = {65, 60, 50, 40, 30};
@@ -97,6 +97,84 @@ int main(int argc, char *argv[]) {
 
     AppConfig app_config; // 設定構造体のインスタンス
 
+int main(int argc, char *argv[]) {
+    vita2d_init();
+    vita2d_sync_wait_for_vblank_start();
+
+    SceCtrlData pad; // コントローラー入力用の構造体
+    sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_PLUS); // サンプリングモード設定
+
+    vita2d_font *font = vita2d_load_default_font();
+
+    SceUInt64 last_frame_time_us = 0;
+    SceUInt64 current_time_us = 0;
+    SceUInt64 elapsed_time_us = 0;
+    SceUInt64 sleep_time_us = 0;
+
+    // 初回実行時の時間設定
+    last_frame_time_us = sceKernelGetSystemTimeWide();
+
+    // 現在の目標FPSとフレーム時間を設定
+    int current_target_fps = available_fps[current_fps_option_index];
+    SceUInt64 current_frame_time_us = 1000000 / current_target_fps;
+
+    while (1) {
+        sceCtrlReadBufferPositive(0, &pad, 1); // コントローラー入力を読み込む
+
+        // 十字キー上でFPSオプションを変更
+        if (pad.buttons & SCE_CTRL_UP) { // ここを SCE_CTRL_UP に変更
+            current_fps_option_index--;
+            if (current_fps_option_index < 0) {
+                current_fps_option_index = num_fps_options - 1; // ラップアラウンド
+            }
+            current_target_fps = available_fps[current_fps_option_index];
+            current_frame_time_us = 1000000 / current_target_fps;
+            sceKernelDelayThread(150 * 1000); // 150ミリ秒 (150000マイクロ秒)
+        }
+        // 十字キー下でFPSオプションを変更
+        if (pad.buttons & SCE_CTRL_DOWN) { // ここを SCE_CTRL_DOWN に変更
+            current_fps_option_index++;
+            if (current_fps_option_index >= num_fps_options) {
+                current_fps_option_index = 0; // ラップアラウンド
+            }
+            current_target_fps = available_fps[current_fps_option_index];
+            current_frame_time_us = 1000000 / current_target_fps;
+            sceKernelDelayThread(150 * 1000); // 150ミリ秒 (150000マイクロ秒)
+        }
+
+        // 描画開始
+        vita2d_start_drawing();
+        vita2d_clear_screen();
+
+        // テキストを描画
+        vita2d_draw_textf(font, SCREEN_WIDTH / 2 - 150, SCREEN_HEIGHT / 2, RGBA8(255, 255, 255, 255), 2.0f, "Hello, PS Vita!");
+        // 現在のFPS設定を表示
+        vita2d_draw_textf(font, 10, 10, RGBA8(255, 255, 0, 255), 1.0f, "Target FPS: %d (Press UP/DOWN to change)", current_target_fps);
+
+        // 描画を終了し、画面に表示
+        vita2d_end_drawing();
+
+        vita2d_sync_wait_for_vblank_start();
+
+        // FPS調整機能
+        current_time_us = sceKernelGetSystemTimeWide();
+        elapsed_time_us = current_time_us - last_frame_time_us;
+
+        if (elapsed_time_us < current_frame_time_us) {
+            sleep_time_us = current_frame_time_us - elapsed_time_us;
+            sceKernelDelayThread(sleep_time_us);
+        }
+
+        last_frame_time_us = sceKernelGetSystemTimeWide();
+    }
+
+    vita2d_free_font(font);
+    vita2d_fini();
+    sceKernelExitProcess(0);
+    return 0;
+}
+
+    
     // GPU周波数の選択肢を定義
     const int gpu_freqs[] = {111, 150, 164, 180, 222}; // MHz
     const int num_gpu_freqs = sizeof(gpu_freqs) / sizeof(gpu_freqs[0]);
