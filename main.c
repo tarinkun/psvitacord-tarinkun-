@@ -6,11 +6,19 @@
 #include <string.h>           // memset、strncpy、strrchr用
 #include <psp2/io/dirent.h>   // ディレクトリ操作用 (sceIoMkdir)
 #include <psp2/io/fcntl.h>    // ファイル操作用 (sceIoOpen/Read/Write/Close)
-
-
+#include <psp2/kernel/sysclib.h>
+#include <psp2/kernel/threadmgr.h>
+#include <psp2/ctrl.h> // コントローラー入力を取得するために必要
 #define SCREEN_WIDTH 960
 #define SCREEN_HEIGHT 544
 #define CONFIG_PATH "ux0:data/MyVitaFreqApp/config.conf" // 設定ファイルのパス。あなたのアプリ名に置き換えてください
+
+// 利用可能なFPSの選択肢
+const int available_fps[] = {65, 60, 50, 40, 30};
+// 選択肢の数
+const int num_fps_options = sizeof(available_fps) / sizeof(available_fps[0]);
+// 現在選択されているFPSオプションのインデックス
+int current_fps_option_index = 1; // デフォルトを60FPS (available_fps[1]) に設定
 
 // --- 設定構造体の定義 ---
 // main関数の外（グローバルスコープ）で定義
