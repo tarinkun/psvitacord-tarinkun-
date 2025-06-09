@@ -14,8 +14,7 @@ endif()
 include($ENV{VITASDK}/share/cmake/vitasdk.cmake)
 
 # ソースファイルを指定
-set(SOURCES main.c)
-
+set(SOURCES main.c config_manager.c) 
 # Vita2Dライブラリを使用するための定義
 add_definitions(-DLINK_VITA2D) 
 
