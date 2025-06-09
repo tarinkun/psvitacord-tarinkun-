@@ -1,3 +1,6 @@
+まず私の友人の友人Nさんに感謝いたします(作成を手伝ってもらっています)
+
+
 # My PS Vita Homebrew
 
 このファイルは、PS Vita向けのcpuHomebrewアプリケーションのです。
