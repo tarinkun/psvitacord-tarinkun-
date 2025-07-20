@@ -44,7 +44,7 @@ VitaSDKとCMakeを使用してビルドされます。
 
 ## PS Vitaへの導入
 
-生成された`.vpk`ファイルをPS Vitaに転送し、VitaShellなどのHomebrewインストーラーでインストールしてください。
+生成された`.vpk`ファイルをPS Vitaに転送してからVitaShellでインストールしてください。
 
 ## 開発環境
 
